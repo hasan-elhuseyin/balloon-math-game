@@ -6,14 +6,11 @@ import { StartupMenu } from './StartupMenu'
 import { Options } from './Options'
 import { GamePlay } from './GamePlay'
 import { LevelCreator } from './LevelCreator'
+import type { Balloon } from './LevelCreator'
 
 interface CustomLevel {
   name: string
-  balloons: Array<{
-    x: number
-    y: number
-    type: string
-  }>
+  balloons: Balloon[]
 }
 
 export default function BalloonGame() {
@@ -39,12 +36,31 @@ export default function BalloonGame() {
     setIsCreatingLevel(false)
   }, [])
 
+  const handleSaveLevel = useCallback((name: string, balloons: Balloon[]) => {
+    setCustomLevels(prevLevels => {
+      // Check if level with same name exists
+      const existingLevelIndex = prevLevels.findIndex(level => level.name === name)
+      
+      if (existingLevelIndex !== -1) {
+        // Replace existing level
+        const newLevels = [...prevLevels]
+        newLevels[existingLevelIndex] = { name, balloons }
+        return newLevels
+      } else {
+        // Add new level
+        return [...prevLevels, { name, balloons }]
+      }
+    })
+    setIsCreatingLevel(false)
+    setShowOptions(true)
+  }, [])
+
   if (isCreatingLevel) {
-    return <LevelCreator onCancel={handleBackToMenu} onSave={(name, balloons) => {
-      setCustomLevels(prev => [...prev, { name, balloons }])
-      setIsCreatingLevel(false)
-      setShowOptions(true)
-    }} />
+    return <LevelCreator 
+      onCancel={handleBackToMenu} 
+      onSave={handleSaveLevel}
+      customLevels={customLevels}
+    />
   }
 
   if (isPlaying) {

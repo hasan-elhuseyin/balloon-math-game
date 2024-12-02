@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
-interface Balloon {
+export interface Balloon {
   x: number
   y: number
   type: 'red' | 'green' | 'blue'
@@ -14,6 +14,7 @@ interface Balloon {
 interface LevelCreatorProps {
   onSave: (name: string, balloons: Balloon[]) => void
   onCancel: () => void
+  customLevels?: Array<{ name: string; balloons: Balloon[] }>
 }
 
 const balloonEmojis = {
@@ -22,7 +23,7 @@ const balloonEmojis = {
   blue: '🔵',
 }
 
-export function LevelCreator({ onSave, onCancel }: LevelCreatorProps) {
+export function LevelCreator({ onSave, onCancel, customLevels }: LevelCreatorProps) {
   const [levelName, setLevelName] = useState('')
   const [balloons, setBalloons] = useState<Balloon[]>([])
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -31,14 +32,13 @@ export function LevelCreator({ onSave, onCancel }: LevelCreatorProps) {
 
   useEffect(() => {
     const handleResize = () => {
-      const width = window.innerWidth * 0.8
-      const height = window.innerHeight * 0.7
+      const width = Math.min(window.innerWidth * 0.7, window.innerHeight * 0.6)
+      const height = width
       setCanvasSize({ width, height })
     }
 
     handleResize()
     window.addEventListener('resize', handleResize)
-
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
@@ -52,39 +52,56 @@ export function LevelCreator({ onSave, onCancel }: LevelCreatorProps) {
     const drawAxes = () => {
       ctx.strokeStyle = '#333'
       ctx.lineWidth = 2
-      ctx.font = '12px Arial'
+      ctx.font = '14px Arial'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
 
-      // X-axis
+      // Draw X axis
       ctx.beginPath()
       ctx.moveTo(0, canvasSize.height / 2)
       ctx.lineTo(canvasSize.width, canvasSize.height / 2)
       ctx.stroke()
 
-      // Y-axis
+      // Draw Y axis
       ctx.beginPath()
       ctx.moveTo(canvasSize.width / 2, 0)
       ctx.lineTo(canvasSize.width / 2, canvasSize.height)
       ctx.stroke()
 
-      // X-axis labels
-      for (let x = -5; x <= 5; x++) {
-        const xPos = (x + 5) * canvasSize.width / 10
+      // Draw X axis labels
+      const xStep = canvasSize.width / (COORD_MAX - COORD_MIN)
+      for (let x = COORD_MIN; x <= COORD_MAX; x++) {
+        const xPos = canvasSize.width / 2 + x * xStep
         ctx.fillText(x.toString(), xPos, canvasSize.height / 2 + 20)
+        
+        // Draw tick marks
+        ctx.beginPath()
+        ctx.moveTo(xPos, canvasSize.height / 2 - 5)
+        ctx.lineTo(xPos, canvasSize.height / 2 + 5)
+        ctx.stroke()
       }
 
-      // Y-axis labels
-      for (let y = -5; y <= 5; y++) {
-        const yPos = canvasSize.height / 2 - y * canvasSize.height / 10
+      // Draw Y axis labels
+      const yStep = canvasSize.height / (COORD_MAX - COORD_MIN)
+      for (let y = COORD_MIN; y <= COORD_MAX; y++) {
+        const yPos = canvasSize.height / 2 - y * yStep
         ctx.fillText(y.toString(), canvasSize.width / 2 - 20, yPos)
+        
+        // Draw tick marks
+        ctx.beginPath()
+        ctx.moveTo(canvasSize.width / 2 - 5, yPos)
+        ctx.lineTo(canvasSize.width / 2 + 5, yPos)
+        ctx.stroke()
       }
     }
 
     const drawBalloons = () => {
+      const xStep = canvasSize.width / (COORD_MAX - COORD_MIN)
+      const yStep = canvasSize.height / (COORD_MAX - COORD_MIN)
+
       balloons.forEach(balloon => {
-        const canvasX = (canvasSize.width / 2) + (balloon.x * 40)
-        const canvasY = (canvasSize.height / 2) - (balloon.y * 40)
+        const canvasX = canvasSize.width / 2 + balloon.x * xStep
+        const canvasY = canvasSize.height / 2 - balloon.y * yStep
         
         ctx.font = '30px Arial'
         ctx.textAlign = 'center'
@@ -98,6 +115,10 @@ export function LevelCreator({ onSave, onCancel }: LevelCreatorProps) {
     drawBalloons()
   }, [canvasSize, balloons])
 
+  // Constants for coordinate system
+  const COORD_MIN = -10
+  const COORD_MAX = 10
+
   const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current
     if (!canvas) return
@@ -107,16 +128,21 @@ export function LevelCreator({ onSave, onCancel }: LevelCreatorProps) {
     const clickY = event.clientY - rect.top
 
     // Convert canvas coordinates to mathematical coordinates
-    const mathX = Math.round((clickX - canvasSize.width / 2) / 40)  // Convert to mathematical X
-    const mathY = Math.round((canvasSize.height / 2 - clickY) / 40) // Convert to mathematical Y
+    const xStep = canvasSize.width / (COORD_MAX - COORD_MIN)
+    const yStep = canvasSize.height / (COORD_MAX - COORD_MIN)
 
-    const newBalloon: Balloon = {
-      x: mathX,
-      y: mathY,
-      type: selectedBalloonType
+    const mathX = Math.round((clickX - canvasSize.width / 2) / xStep)
+    const mathY = Math.round((canvasSize.height / 2 - clickY) / yStep)
+
+    // Only add balloon if within bounds
+    if (mathX >= COORD_MIN && mathX <= COORD_MAX && mathY >= COORD_MIN && mathY <= COORD_MAX) {
+      const newBalloon: Balloon = {
+        x: mathX,
+        y: mathY,
+        type: selectedBalloonType
+      }
+      setBalloons([...balloons, newBalloon])
     }
-
-    setBalloons([...balloons, newBalloon])
   }
 
   const handleSave = () => {
@@ -124,21 +150,34 @@ export function LevelCreator({ onSave, onCancel }: LevelCreatorProps) {
       alert('Please enter a level name')
       return
     }
-    onSave(levelName, balloons)
+
+    // Check if level exists in customLevels prop
+    const levelExists = customLevels?.some(level => level.name === levelName)
+    if (levelExists) {
+      if (window.confirm(`Level "${levelName}" already exists. Do you want to overwrite it?`)) {
+        onSave(levelName, balloons)
+      }
+    } else {
+      onSave(levelName, balloons)
+    }
   }
 
   return (
-    <div className="w-full h-screen flex flex-col items-center justify-center bg-gray-100">
-      <h2 className="text-2xl font-bold mb-4">Create New Level</h2>
-      <Input
-        type="text"
-        value={levelName}
-        onChange={(e) => setLevelName(e.target.value)}
-        placeholder="Enter level name"
-        className="mb-4"
-      />
-      <div className="mb-4">
-        <Select onValueChange={(value: 'red' | 'green' | 'blue') => setSelectedBalloonType(value)} defaultValue={selectedBalloonType}>
+    <div className="w-full h-screen flex flex-col items-center justify-center gap-4 bg-gray-100 p-8">
+      <h2 className="text-2xl font-bold">Create New Level</h2>
+      
+      <div className="flex items-center gap-4 mb-2">
+        <Input
+          type="text"
+          value={levelName}
+          onChange={(e) => setLevelName(e.target.value)}
+          placeholder="Enter level name"
+          className="w-64"
+        />
+        <Select 
+          onValueChange={(value: 'red' | 'green' | 'blue') => setSelectedBalloonType(value)} 
+          defaultValue={selectedBalloonType}
+        >
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Select balloon type" />
           </SelectTrigger>
@@ -149,14 +188,16 @@ export function LevelCreator({ onSave, onCancel }: LevelCreatorProps) {
           </SelectContent>
         </Select>
       </div>
+
       <canvas
         ref={canvasRef}
         width={canvasSize.width}
         height={canvasSize.height}
         onClick={handleCanvasClick}
-        className="border border-gray-300 shadow-lg mb-4"
+        className="border border-gray-300 shadow-lg bg-white"
       />
-      <div className="flex gap-4">
+
+      <div className="flex gap-4 mt-2">
         <Button onClick={handleSave}>Save Level</Button>
         <Button onClick={onCancel} variant="outline">Cancel</Button>
       </div>

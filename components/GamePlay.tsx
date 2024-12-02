@@ -30,6 +30,9 @@ const balloonEmojis = {
   red: '🎈',
 }
 
+const COORD_MIN = -10
+const COORD_MAX = 10
+
 export function GamePlay({ rocketSpeed, onBackToMenu, customLevel }: GamePlayProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animationRef = useRef<number | null>(null)
@@ -47,14 +50,15 @@ export function GamePlay({ rocketSpeed, onBackToMenu, customLevel }: GamePlayPro
 
   useEffect(() => {
     const handleResize = () => {
+      const headerHeight = 64  // 4rem (p-4) * 2
+      const footerHeight = 64
       const width = window.innerWidth
-      const height = window.innerHeight * 0.9
+      const height = window.innerHeight - (headerHeight + footerHeight)
       setCanvasSize({ width, height })
     }
 
     handleResize()
     window.addEventListener('resize', handleResize)
-
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
@@ -62,20 +66,34 @@ export function GamePlay({ rocketSpeed, onBackToMenu, customLevel }: GamePlayPro
     if (canvasSize.width === 0 || canvasSize.height === 0) return
 
     if (customLevel) {
-      console.log('Custom level balloons:', customLevel)
-      // Convert from mathematical coordinates to canvas coordinates
+      // Use the saved mathematical coordinates directly
+      const xStep = canvasSize.width / (COORD_MAX - COORD_MIN)
+      const yStep = canvasSize.height / (COORD_MAX - COORD_MIN)
+      
       setBalloons(customLevel.map(balloon => ({
-        x: (canvasSize.width / 2) + (balloon.x * 40),   // Center + scale X
-        y: (canvasSize.height / 2) - (balloon.y * 40),  // Center - scale Y (invert Y-axis)
+        // Store both canvas and math coordinates
+        x: (canvasSize.width / 2) + (balloon.x * xStep),
+        y: (canvasSize.height / 2) - (balloon.y * yStep),
+        mathX: balloon.x,  // Store original math coordinates
+        mathY: balloon.y,
         type: balloon.type as 'red' | 'green' | 'blue'
       })))
     } else {
-      // Generate random balloons for default level
-      const newBalloons: Balloon[] = Array.from({ length: 10 }, () => ({
-        x: Math.random() * canvasSize.width,
-        y: Math.random() * (canvasSize.height * 0.8),
-        type: Math.random() > 0.7 ? (Math.random() > 0.5 ? 'blue' : 'green') : 'red'
-      }))
+      // Generate random balloons within coordinate bounds
+      const xStep = canvasSize.width / (COORD_MAX - COORD_MIN)
+      const yStep = canvasSize.height / (COORD_MAX - COORD_MIN)
+      
+      const newBalloons: Balloon[] = Array.from({ length: 10 }, () => {
+        const mathX = Math.floor(Math.random() * (COORD_MAX - COORD_MIN + 1)) + COORD_MIN
+        const mathY = Math.floor(Math.random() * (COORD_MAX - COORD_MIN + 1)) + COORD_MIN
+        return {
+          x: (canvasSize.width / 2) + (mathX * xStep),
+          y: (canvasSize.height / 2) - (mathY * yStep),
+          mathX,
+          mathY,
+          type: Math.random() > 0.7 ? (Math.random() > 0.5 ? 'blue' : 'green') : 'red'
+        }
+      })
       setBalloons(newBalloons)
     }
 
@@ -95,12 +113,47 @@ export function GamePlay({ rocketSpeed, onBackToMenu, customLevel }: GamePlayPro
     // Draw axes
     ctx.strokeStyle = '#333'
     ctx.lineWidth = 2
+    ctx.font = '14px Arial'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+
+    // Draw X axis
     ctx.beginPath()
     ctx.moveTo(0, canvasSize.height / 2)
     ctx.lineTo(canvasSize.width, canvasSize.height / 2)
+    ctx.stroke()
+
+    // Draw Y axis
+    ctx.beginPath()
     ctx.moveTo(canvasSize.width / 2, 0)
     ctx.lineTo(canvasSize.width / 2, canvasSize.height)
     ctx.stroke()
+
+    // Draw X axis labels
+    const xStep = canvasSize.width / 20
+    for (let x = -10; x <= 10; x++) {
+      const xPos = canvasSize.width / 2 + x * xStep
+      ctx.fillText(x.toString(), xPos, canvasSize.height / 2 + 20)
+      
+      // Draw tick marks
+      ctx.beginPath()
+      ctx.moveTo(xPos, canvasSize.height / 2 - 5)
+      ctx.lineTo(xPos, canvasSize.height / 2 + 5)
+      ctx.stroke()
+    }
+
+    // Draw Y axis labels
+    const yStep = canvasSize.height / 20
+    for (let y = -10; y <= 10; y++) {
+      const yPos = canvasSize.height / 2 - y * yStep
+      ctx.fillText(y.toString(), canvasSize.width / 2 - 20, yPos)
+      
+      // Draw tick marks
+      ctx.beginPath()
+      ctx.moveTo(canvasSize.width / 2 - 5, yPos)
+      ctx.lineTo(canvasSize.width / 2 + 5, yPos)
+      ctx.stroke()
+    }
 
     // Draw balloons
     balloons.forEach(balloon => {
@@ -150,13 +203,23 @@ export function GamePlay({ rocketSpeed, onBackToMenu, customLevel }: GamePlayPro
 
     try {
       const compiledFormula = compile(formula)
-      const rocketX = -canvasSize.width / 2
+      const xStep = canvasSize.width / 20
+      const yStep = canvasSize.height / 20
+
+      // Convert from canvas to math coordinates for initial position
+      const rocketX = -10  // Start from leftmost position (-10)
       const rocketY = compiledFormula.evaluate({ x: rocketX })
-      const initialPosition = { x: rocketX + canvasSize.width / 2, y: canvasSize.height / 2 - rocketY }
+      
+      // Convert from math to canvas coordinates
+      const initialPosition = {
+        x: canvasSize.width / 2 + (rocketX * xStep),
+        y: canvasSize.height / 2 - (rocketY * yStep)
+      }
+
       setRocketPosition(initialPosition)
       setRocketTrack([initialPosition])
 
-      let currentX = initialPosition.x
+      let currentX = rocketX
 
       const animate = () => {
         if (isGameComplete) {
@@ -164,9 +227,12 @@ export function GamePlay({ rocketSpeed, onBackToMenu, customLevel }: GamePlayPro
           return
         }
 
-        currentX += rocketSpeed
-        const newY = canvasSize.height / 2 - compiledFormula.evaluate({ x: currentX - canvasSize.width / 2 })
-        const newPosition = { x: currentX, y: newY }
+        currentX += (20 / (canvasSize.width / rocketSpeed))  // Scale speed to coordinate system
+        const mathY = compiledFormula.evaluate({ x: currentX })
+        const newPosition = {
+          x: canvasSize.width / 2 + (currentX * xStep),
+          y: canvasSize.height / 2 - (mathY * yStep)
+        }
 
         setRocketPosition(newPosition)
         setRocketTrack(prevTrack => [...prevTrack, newPosition])
@@ -200,7 +266,7 @@ export function GamePlay({ rocketSpeed, onBackToMenu, customLevel }: GamePlayPro
           })
         }
 
-        if (currentX > canvasSize.width) {
+        if (currentX > 10) {  // Stop at rightmost position (+10)
           cleanupAnimation()
           return
         }
@@ -250,29 +316,45 @@ export function GamePlay({ rocketSpeed, onBackToMenu, customLevel }: GamePlayPro
     setRocketsUsed(0)
     // Reset balloons to initial state
     if (customLevel) {
+      const xStep = canvasSize.width / (COORD_MAX - COORD_MIN)
+      const yStep = canvasSize.height / (COORD_MAX - COORD_MIN)
+      
       setBalloons(customLevel.map(balloon => ({
-        x: (canvasSize.width / 2) + (balloon.x * 40),
-        y: (canvasSize.height / 2) - (balloon.y * 40),
+        x: (canvasSize.width / 2) + (balloon.x * xStep),
+        y: (canvasSize.height / 2) - (balloon.y * yStep),
+        mathX: balloon.x,
+        mathY: balloon.y,
         type: balloon.type as 'red' | 'green' | 'blue'
       })))
     }
   }
 
   return (
-    <>
-      <div className="w-full h-screen flex flex-col items-center justify-center bg-gray-100 relative">
-        <div className="absolute top-4 left-4 text-lg font-bold">Rockets Used: {rocketsUsed}</div>
-        <div className="mb-4 text-lg font-bold">
+    <div className="w-full h-screen flex flex-col bg-gray-100 overflow-hidden">
+      <header className="w-full h-16 p-4 border-b bg-white shadow-sm flex justify-between items-center">
+        <div className="text-lg font-bold">
+          Rockets Used: {rocketsUsed}
+        </div>
+        <div className="text-lg font-bold">
           Score: {score}
         </div>
+        <Button onClick={onBackToMenu} variant="outline">
+          Back to Menu
+        </Button>
+      </header>
+
+      <main className="flex-1 flex items-center justify-center min-h-0">
         <canvas
           ref={canvasRef}
           width={canvasSize.width}
           height={canvasSize.height}
           className="border border-gray-300 shadow-lg"
         />
-        <form onSubmit={handleFormulaSubmit} className="mt-4 flex items-center">
-          <label htmlFor="formula" className="mr-2 font-bold">
+      </main>
+
+      <footer className="w-full h-16 p-4 border-t bg-white shadow-sm">
+        <form onSubmit={handleFormulaSubmit} className="flex items-center justify-center gap-2">
+          <label htmlFor="formula" className="font-bold">
             y =
           </label>
           <Input
@@ -280,7 +362,7 @@ export function GamePlay({ rocketSpeed, onBackToMenu, customLevel }: GamePlayPro
             id="formula"
             value={formula}
             onChange={(e) => setFormula(e.target.value)}
-            className="mr-2"
+            className="max-w-xs"
             placeholder="Enter your formula"
             disabled={isAnimating}
           />
@@ -288,10 +370,8 @@ export function GamePlay({ rocketSpeed, onBackToMenu, customLevel }: GamePlayPro
             {isAnimating ? 'Shooting...' : 'Shoot'}
           </Button>
         </form>
-        <Button onClick={onBackToMenu} className="mt-4" disabled={isAnimating}>Back to Menu</Button>
-      </div>
+      </footer>
 
-      {/* Level completion dialog */}
       <Dialog open={showCompletionDialog} onOpenChange={setShowCompletionDialog}>
         <DialogContent>
           <DialogTitle>Level Complete!</DialogTitle>
@@ -309,7 +389,7 @@ export function GamePlay({ rocketSpeed, onBackToMenu, customLevel }: GamePlayPro
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   )
 }
 
