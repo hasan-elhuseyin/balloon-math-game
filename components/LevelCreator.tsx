@@ -83,10 +83,13 @@ export function LevelCreator({ onSave, onCancel }: LevelCreatorProps) {
 
     const drawBalloons = () => {
       balloons.forEach(balloon => {
+        const canvasX = (canvasSize.width / 2) + (balloon.x * 40)
+        const canvasY = (canvasSize.height / 2) - (balloon.y * 40)
+        
         ctx.font = '30px Arial'
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
-        ctx.fillText(balloonEmojis[balloon.type], balloon.x, balloon.y)
+        ctx.fillText(balloonEmojis[balloon.type], canvasX, canvasY)
       })
     }
 
@@ -100,12 +103,16 @@ export function LevelCreator({ onSave, onCancel }: LevelCreatorProps) {
     if (!canvas) return
 
     const rect = canvas.getBoundingClientRect()
-    const x = event.clientX - rect.left
-    const y = event.clientY - rect.top
+    const clickX = event.clientX - rect.left
+    const clickY = event.clientY - rect.top
+
+    // Convert canvas coordinates to mathematical coordinates
+    const mathX = Math.round((clickX - canvasSize.width / 2) / 40)  // Convert to mathematical X
+    const mathY = Math.round((canvasSize.height / 2 - clickY) / 40) // Convert to mathematical Y
 
     const newBalloon: Balloon = {
-      x,
-      y,
+      x: mathX,
+      y: mathY,
       type: selectedBalloonType
     }
 
