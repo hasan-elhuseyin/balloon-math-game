@@ -25,9 +25,9 @@ interface GamePlayProps {
 const ROCKET_HITBOX_SIZE = 40
 
 const balloonEmojis = {
-  red: '🎈',
-  green: '🟢',
   blue: '🔵',
+  green: '🟢',
+  red: '🎈',
 }
 
 export function GamePlay({ rocketSpeed, onBackToMenu, customLevel }: GamePlayProps) {
@@ -180,9 +180,15 @@ export function GamePlay({ rocketSpeed, onBackToMenu, customLevel }: GamePlayPro
           setBalloons(prevBalloons => {
             const newBalloons = prevBalloons.map(balloon => {
               if (balloon === hitBalloon) {
-                if (balloon.type === 'blue') return { ...balloon, type: 'green' }
-                if (balloon.type === 'green') return { ...balloon, type: 'red' }
-                return null
+                if (balloon.type === 'blue') {
+                  return { ...balloon, type: 'green' }
+                }
+                if (balloon.type === 'green') {
+                  return { ...balloon, type: 'red' }
+                }
+                if (balloon.type === 'red') {
+                  return null
+                }
               }
               return balloon
             }).filter((balloon): balloon is Balloon => balloon !== null)
@@ -225,50 +231,6 @@ export function GamePlay({ rocketSpeed, onBackToMenu, customLevel }: GamePlayPro
     }
     setIsAnimating(false)
   }, [])
-
-  const handleCollisions = useCallback((newPosition: { x: number, y: number }) => {
-    setBalloons(prevBalloons => {
-      const newBalloons = prevBalloons.map(balloon => {
-        if (Math.sqrt((balloon.x - newPosition.x) ** 2 + (balloon.y - newPosition.y) ** 2) <= ROCKET_HITBOX_SIZE) {
-          if (balloon.type === 'blue') return { ...balloon, type: 'green' }
-          if (balloon.type === 'green') return { ...balloon, type: 'red' }
-          return null
-        }
-        return balloon
-      }).filter((balloon): balloon is Balloon => balloon !== null)
-
-      if (newBalloons.length === 0 && !isGameComplete) {
-        handleLevelComplete()
-      }
-      return newBalloons
-    })
-  }, [isGameComplete, rocketsUsed, cleanupAnimation, onBackToMenu])
-
-  const animate = useCallback((currentX: number, compiledFormula: any) => {
-    if (isGameComplete) {
-      cleanupAnimation()
-      return
-    }
-
-    currentX += rocketSpeed
-    const newY = canvasSize.height / 2 - compiledFormula.evaluate({ x: currentX - canvasSize.width / 2 })
-    const newPosition = { x: currentX, y: newY }
-
-    setRocketPosition(newPosition)
-    setRocketTrack(prevTrack => [...prevTrack, newPosition])
-    handleCollisions(newPosition)
-
-    if (currentX > canvasSize.width) {
-      cleanupAnimation()
-      return
-    }
-
-    animationRef.current = requestAnimationFrame(() => animate(currentX, compiledFormula))
-  }, [rocketSpeed, canvasSize, isGameComplete, cleanupAnimation, handleCollisions])
-
-  useEffect(() => {
-    return () => cleanupAnimation()
-  }, [cleanupAnimation])
 
   const handleLevelComplete = () => {
     setIsGameComplete(true)
