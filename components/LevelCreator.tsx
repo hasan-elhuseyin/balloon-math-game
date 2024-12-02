@@ -29,6 +29,7 @@ export function LevelCreator({ onSave, onCancel, customLevels }: LevelCreatorPro
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 })
   const [selectedBalloonType, setSelectedBalloonType] = useState<'red' | 'green' | 'blue'>('red')
+  const [cursorPos, setCursorPos] = useState<{ x: number, y: number } | null>(null)
 
   useEffect(() => {
     const handleResize = () => {
@@ -110,10 +111,45 @@ export function LevelCreator({ onSave, onCancel, customLevels }: LevelCreatorPro
       })
     }
 
+    const drawGuideLines = () => {
+      if (cursorPos) {
+        // Draw dotted lines
+        ctx.setLineDash([5, 5])
+        ctx.strokeStyle = '#666'
+        ctx.lineWidth = 1
+
+        // Vertical guide line
+        ctx.beginPath()
+        ctx.moveTo(cursorPos.x, 0)
+        ctx.lineTo(cursorPos.x, canvasSize.height)
+        ctx.stroke()
+
+        // Horizontal guide line
+        ctx.beginPath()
+        ctx.moveTo(0, cursorPos.y)
+        ctx.lineTo(canvasSize.width, cursorPos.y)
+        ctx.stroke()
+
+        // Reset line style
+        ctx.setLineDash([])
+
+        // Show coordinates
+        const xStep = canvasSize.width / (COORD_MAX - COORD_MIN)
+        const yStep = canvasSize.height / (COORD_MAX - COORD_MIN)
+        const mathX = Math.round((cursorPos.x - canvasSize.width / 2) / xStep)
+        const mathY = Math.round((canvasSize.height / 2 - cursorPos.y) / yStep)
+
+        ctx.fillStyle = '#333'
+        ctx.font = '14px Arial'
+        ctx.fillText(`(${mathX}, ${mathY})`, cursorPos.x + 10, cursorPos.y - 10)
+      }
+    }
+
     ctx.clearRect(0, 0, canvasSize.width, canvasSize.height)
     drawAxes()
     drawBalloons()
-  }, [canvasSize, balloons])
+    drawGuideLines()
+  }, [canvasSize, balloons, cursorPos])
 
   // Constants for coordinate system
   const COORD_MIN = -10
@@ -134,7 +170,20 @@ export function LevelCreator({ onSave, onCancel, customLevels }: LevelCreatorPro
     const mathX = Math.round((clickX - canvasSize.width / 2) / xStep)
     const mathY = Math.round((canvasSize.height / 2 - clickY) / yStep)
 
-    // Only add balloon if within bounds
+    // Check if clicking on an existing balloon
+    const existingBalloonIndex = balloons.findIndex(balloon => 
+      balloon.x === mathX && balloon.y === mathY
+    )
+
+    if (existingBalloonIndex !== -1) {
+      // Remove the balloon if it exists at this position
+      setBalloons(prevBalloons => 
+        prevBalloons.filter((_, index) => index !== existingBalloonIndex)
+      )
+      return
+    }
+
+    // Add new balloon if within bounds
     if (mathX >= COORD_MIN && mathX <= COORD_MAX && mathY >= COORD_MIN && mathY <= COORD_MAX) {
       const newBalloon: Balloon = {
         x: mathX,
@@ -143,6 +192,16 @@ export function LevelCreator({ onSave, onCancel, customLevels }: LevelCreatorPro
       }
       setBalloons([...balloons, newBalloon])
     }
+  }
+
+  const handleMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const rect = canvas.getBoundingClientRect()
+    const x = event.clientX - rect.left
+    const y = event.clientY - rect.top
+    setCursorPos({ x, y })
   }
 
   const handleSave = () => {
@@ -194,6 +253,8 @@ export function LevelCreator({ onSave, onCancel, customLevels }: LevelCreatorPro
         width={canvasSize.width}
         height={canvasSize.height}
         onClick={handleCanvasClick}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setCursorPos(null)}
         className="border border-gray-300 shadow-lg bg-white"
       />
 
