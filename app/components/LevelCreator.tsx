@@ -1,9 +1,9 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import { Button } from '@/app/src/components/ui/button'
-import { Input } from '@/app/src/components/ui/input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/src/components/ui/select'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 
 export interface Balloon {
   x: number

@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
-import { Button } from '@/app/src/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/src/components/ui/select'
+import { Button } from './ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
 
 interface StartupMenuProps {
   onPlay: () => void
