@@ -6,7 +6,7 @@ import { StartupMenu } from './StartupMenu'
 import { Options } from './Options'
 import { GamePlay } from './GamePlay'
 import { LevelCreator } from './LevelCreator'
-import type { Balloon } from './LevelCreator'
+import { Balloon } from '../models/BalloonManager'
 
 interface CustomLevel {
   name: string

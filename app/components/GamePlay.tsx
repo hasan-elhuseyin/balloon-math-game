@@ -5,12 +5,7 @@ import { compile } from 'mathjs'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Dialog, DialogContent, DialogTitle, DialogFooter } from "./ui/dialog"
-
-interface Balloon {
-  x: number
-  y: number
-  type: 'red' | 'green' | 'blue'
-}
+import { Balloon, BalloonEmojis } from '../models/BalloonManager'
 
 interface GamePlayProps {
   rocketSpeed: number
@@ -23,12 +18,6 @@ interface GamePlayProps {
 }
 
 const ROCKET_HITBOX_SIZE = 40
-
-const balloonEmojis = {
-  blue: '🔵',
-  green: '🟢',
-  red: '🎈',
-}
 
 const COORD_MIN = -10
 const COORD_MAX = 10
@@ -160,7 +149,7 @@ export function GamePlay({ rocketSpeed, onBackToMenu, customLevel }: GamePlayPro
       ctx.font = '30px Arial'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
-      ctx.fillText(balloonEmojis[balloon.type], balloon.x, balloon.y)
+      ctx.fillText(BalloonEmojis[balloon.type], balloon.x, balloon.y)
     })
 
     // Draw rocket

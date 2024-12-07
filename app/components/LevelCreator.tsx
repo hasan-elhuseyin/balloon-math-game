@@ -4,23 +4,12 @@ import React, { useState, useRef, useEffect } from 'react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select'
-
-export interface Balloon {
-  x: number
-  y: number
-  type: 'red' | 'green' | 'blue'
-}
+import { Balloon, BalloonEmojis } from '../models/BalloonManager'
 
 interface LevelCreatorProps {
   onSave: (name: string, balloons: Balloon[]) => void
   onCancel: () => void
   customLevels?: Array<{ name: string; balloons: Balloon[] }>
-}
-
-const balloonEmojis = {
-  red: '🎈',
-  green: '🟢',
-  blue: '🔵',
 }
 
 export function LevelCreator({ onSave, onCancel, customLevels }: LevelCreatorProps) {
@@ -107,7 +96,7 @@ export function LevelCreator({ onSave, onCancel, customLevels }: LevelCreatorPro
         ctx.font = '30px Arial'
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
-        ctx.fillText(balloonEmojis[balloon.type], canvasX, canvasY)
+        ctx.fillText(BalloonEmojis[balloon.type], canvasX, canvasY)
       })
     }
 
@@ -188,7 +177,7 @@ export function LevelCreator({ onSave, onCancel, customLevels }: LevelCreatorPro
       const newBalloon: Balloon = {
         x: mathX,
         y: mathY,
-        type: selectedBalloonType
+        type: selectedBalloonType,
       }
       setBalloons([...balloons, newBalloon])
     }

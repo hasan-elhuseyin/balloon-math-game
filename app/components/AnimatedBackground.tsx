@@ -1,15 +1,10 @@
 'use client'
 
 import React, { useRef, useEffect } from 'react'
+import { AnimatedBalloon, Balloons } from '../models/BalloonManager'
 
 const BALLOON_COUNT = 20
 const ROCKET_COUNT = 3
-
-interface Balloon {
-  x: number
-  y: number
-  speed: number
-}
 
 interface Rocket {
   x: number
@@ -34,10 +29,11 @@ export function AnimatedBackground() {
     canvas.width = window.innerWidth
     canvas.height = window.innerHeight
 
-    const balloons: Balloon[] = Array.from({ length: BALLOON_COUNT }, () => ({
+    const balloons: AnimatedBalloon[] = Array.from({ length: BALLOON_COUNT }, () => ({
       x: Math.random() * canvas.width,
       y: Math.random() * canvas.height,
-      speed: Math.random() * 0.5 + 0.1,
+      velocity: Math.random() * 0.5 + 0.1,
+      type: Balloons.red.type
     }))
 
     const rockets: Rocket[] = Array.from({ length: ROCKET_COUNT }, () => ({
@@ -51,10 +47,10 @@ export function AnimatedBackground() {
       context.clearRect(0, 0, canvasEl.width, canvasEl.height)
 
       balloons.forEach(balloon => {
-        balloon.y -= balloon.speed
+        balloon.y -= balloon.velocity
         if (balloon.y < -60) balloon.y = canvasEl.height + 60
         context.font = '60px Arial'
-        context.fillText('🎈', balloon.x, balloon.y)
+        context.fillText(Balloons.red.emoji, balloon.x, balloon.y)
       })
 
       rockets.forEach(rocket => {
