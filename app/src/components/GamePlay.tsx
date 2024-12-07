@@ -2,9 +2,9 @@
 
 import React, { useRef, useEffect, useState, useCallback } from 'react'
 import { compile } from 'mathjs'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { Button } from '@/app/src/components/ui/button'
+import { Input } from '@/app/src/components/ui/input'
+import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/app/src/components/ui/dialog"
 
 interface Balloon {
   x: number

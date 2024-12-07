@@ -1,6 +1,6 @@
 import React from 'react'
-import { Button } from '@/components/ui/button'
-import { Slider } from '@/components/ui/slider'
+import { Button } from '@/app/src/components/ui/button'
+import { Slider } from '@/app/src/components/ui/slider'
 
 interface OptionsProps {
   onBack: () => void

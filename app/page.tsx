@@ -1,4 +1,4 @@
-import BalloonGame from '@/components/BalloonGame'
+import BalloonGame from '@/app/src/components/BalloonGame'
 
 export default function Home() {
   return (
